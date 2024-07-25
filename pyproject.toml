@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "looped-experiments"
+version = "0.1.0"
+authors = [{ name = "Slava Chaunin", email = "slava.chaunin@gmail.com" }]
+readme = "README.md"
+dependencies = [
+    "torch",
+    "numpy"
+]
+
+[project.urls]
+Homepage = "https://github.com/ssslakter/tg-rag"
+Issues = "https://github.com/ssslakter/tg-rag/issues"
+
+
