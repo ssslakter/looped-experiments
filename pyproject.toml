@@ -9,11 +9,17 @@ authors = [{ name = "Slava Chaunin", email = "slava.chaunin@gmail.com" }]
 readme = "README.md"
 dependencies = [
     "torch",
-    "numpy"
+    "numpy",
+    "fastcore",
+    "fastprogress",
+    "matplotlib"
 ]
 
 [project.urls]
 Homepage = "https://github.com/ssslakter/tg-rag"
 Issues = "https://github.com/ssslakter/tg-rag/issues"
+
+[tool.setuptools]
+packages = ["looped_experiments"]
 
 
