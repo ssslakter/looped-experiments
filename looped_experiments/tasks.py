@@ -10,24 +10,26 @@ from torch.utils.data import DataLoader, IterableDataset
 
 # %% ../nbs/01_tasks.ipynb 3
 class DataGenerator(IterableDataset):
-    def __init__(self, n_batches, batch_generator):
+    def __init__(self, batch_generator, n_batches=None):
         self.batch_generator = batch_generator
         self.n_batches = n_batches
-        self.cnt = 0
+
+    def __len__(self): return self.n_batches
 
     def __iter__(self):
         self.cnt = 0
         return self
 
     def __next__(self):
-        if self.cnt >= self.n_batches: raise StopIteration
+        if self.n_batches and self.cnt >= len(self): raise StopIteration
         self.cnt += 1
         return self.batch_generator()
 
 
 @fc.delegates(DataLoader)
-def dataloader(batch_generator, n_samples, **kwargs):
-    return DataLoader(DataGenerator(n_samples // batch_generator.bs, batch_generator), batch_size=None, **kwargs)
+def dataloader(batch_generator, n_batches=None, **kwargs):
+    return DataLoader(DataGenerator(batch_generator, n_batches), batch_size=None, **kwargs)
+
 
 @fc.patch()
 def sample(dl: DataLoader): return next(iter(dl))

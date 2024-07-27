@@ -12,7 +12,8 @@ dependencies = [
     "numpy",
     "fastcore",
     "fastprogress",
-    "matplotlib"
+    "matplotlib",
+    "hydra-core",
 ]
 
 [project.urls]
