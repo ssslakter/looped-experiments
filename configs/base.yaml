@@ -50,5 +50,5 @@ training:
             interval: 500
     n_loop_window: 20
 
-out_dir: ./results2/linear_regression_baseline
+out_dir: ./results/linear_regression_baseline
 debug_mode: False
