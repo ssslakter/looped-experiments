@@ -24,6 +24,9 @@ class DataGenerator(IterableDataset):
         if self.n_batches and self.cnt >= len(self): raise StopIteration
         self.cnt += 1
         return self.batch_generator()
+    
+    @property
+    def task(self): return self.batch_generator
 
 
 @fc.delegates(DataLoader)
@@ -36,28 +39,35 @@ def sample(dl: DataLoader): return next(iter(dl))
 
 # %% ../nbs/01_tasks.ipynb 5
 class LinearRegression:
-    def __init__(self, bs: int, n_points=30, n_dim=20, std=0.1, sparsity=None):
+    def __init__(self, bs: int, n_points=30, n_dims=20, std=0.1, sparsity=None, truncated_dims=0):
         """
         Args:
             bs (int): Batch size
             n_points (int, optional): Number of data points in a batch. Defaults to 30.
-            n_dim (int, optional): Dimension of each point. Defaults to 20.
+            n_dims (int, optional): Dimension of each point. Defaults to 20.
             std (float, optional): standard deviation. Defaults to 0.1.
             sparsity (int, optional): Number of non-zero weights in model. Defaults to None.
+            truncated_dims (int, optional): Number of dimensions to truncate. Defaults to 0.
         """
-        self.bs, self.n_points, self.n_dim, self.std = bs, n_points, n_dim, std
-        self.sparsity = sparsity if sparsity is not None else n_dim
+        self.bs, self.n_dims, self.std = bs, n_dims, std
+        self.sparsity = sparsity if sparsity is not None else n_dims
+        # Dynamically updated attributes
+        self.truncated_dims = truncated_dims
+        self.n_points = n_points
 
     def __call__(self):
-        xs = torch.randn(self.bs, self.n_points, self.n_dim)
-        ws = torch.randn(self.bs, self.n_dim, 1)
+        xs = torch.randn(self.bs, self.n_points, self.n_dims)
+        ws = torch.randn(self.bs, self.n_dims, 1)
         mask = self._sparse_mask()
         ws[mask] = 0
+        if self.truncated_dims > 0:
+            xs[:, :, -self.truncated_dims:] = 0
+            ws[:, -self.truncated_dims:] = 0
         ys = torch.bmm(xs, ws).squeeze(-1)
         return xs, ys + self.std * torch.randn_like(ys)
 
     def _sparse_mask(self):
-        mask = torch.ones(self.bs, self.n_dim, dtype=bool)
+        mask = torch.ones(self.bs, self.n_dims, dtype=bool)
         idx = torch.multinomial(torch.ones_like(mask, dtype=float), self.sparsity)
         mask.scatter_(1, idx, False)
         return mask
