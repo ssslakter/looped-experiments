@@ -1,0 +1,5 @@
+defaults:
+  - base
+
+family: gpt2_loop
+n_layer: 1

@@ -11,6 +11,7 @@ import torch
 import torch.nn.functional as F
 from fastprogress import master_bar, progress_bar
 from torch import optim
+from omegaconf import OmegaConf
 
 # %% ../nbs/03_training.ipynb 2
 class with_cbs:
@@ -124,41 +125,48 @@ class WandbCB:
     def before_fit(self, learn):
         learn.stats = {}
         self.run = self.wandb.init(project=self.wcfg.project,
-                        mode="disabled" if self.cfg.debug_mode else "online")
-        self.run.config = self.cfg
+                                   name=self.wcfg.name,
+                                   config=OmegaConf.to_container(self.cfg),
+                                   mode="disabled" if self.cfg.debug_mode else "online")
 
     def after_batch(self, learn):
         if learn.train_step % self.wcfg.log_every_steps == 0:
-            self.run.log(
-                {
+            if learn.model.training:
+                self.run.log({
                     "loss": learn.loss,
                     "lr": learn.optimizer.param_groups[0]['lr'],
                     **learn.stats
-                },
-                step=learn.train_step,
-            )
+                }, step=learn.train_step)
+            else: 
+                self.run.log({"valid_loss": learn.loss}, step=learn.train_step)
 
     def after_fit(self, _): self.run.finish()
-    
+
 
 DEFAULT_CBS = [ToDeviceCB(), SaveModelCB("models")]
 
-# %% ../nbs/03_training.ipynb 4
+# %% ../nbs/03_training.ipynb 5
 class CurriculumCB:
     def __init__(self, curriculum_config):
         self.cfg = curriculum_config
-
+        
     def get_params(self, name, step):
         cfg = self.cfg[name]
         return min(cfg.end, cfg.start + step // cfg.interval * cfg.inc)
-    
+
     def update_task(self, learn, ds):
-        n_dims = self.get_params("dims", learn.train_step)
-        ds.task.truncated_dims = ds.task.n_dim - n_dims
         ds.task.n_points = self.get_params("points", learn.train_step)
+        n_dims = self.get_params("dims", learn.train_step)
+        ds.task.truncated_dims = ds.task.n_dims - n_dims
         if hasattr(learn, 'stats'):
-            learn.stats['n_dims'] = n_dims
             learn.stats['n_points'] = ds.task.n_points
+            learn.stats['n_dims'] = n_dims
+
+    def update_model(self, learn):
+        learn.model.n_loops = self.get_params("loops", learn.train_step)
+        learn.model.n_loop_window = self.cfg["loops"].n_loop_window
+        if hasattr(learn, 'stats'):
+            learn.stats['n_loops'] = learn.model.n_loops
 
     def after_batch(self, learn):
         if learn.model.training: self.update_task(learn, learn.dl_train.dataset)

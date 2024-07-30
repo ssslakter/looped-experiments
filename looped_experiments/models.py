@@ -53,7 +53,7 @@ class MaskedTransformer(nn.Module):
         pos_emb = self.transformer.wpe(pos)
         x = self.transformer.drop(embs + pos_emb)
         for block in self.transformer.h:
-            x = block(x+embs)
+            x = block(x)
         x = self.transformer.ln_f(x)
 
         return x
@@ -83,25 +83,23 @@ class Transformer(MaskedTransformer):
         return y
 
 # %% ../nbs/02_models.ipynb 7
-class LoopedTransformer(MaskedTransformer):
+class LoopedTransformer(Transformer):
     '''Looped transformer for tasks from in-context learning'''
-
     def __init__(self, cfg):
         super().__init__(cfg)
-        self.read_in = nn.Linear(cfg.n_dims, cfg.n_embd)
-        self.read_out = nn.Linear(cfg.n_embd, 1)
-
-        self._init_all_params()
-
-    def create_prompt(self, xs, ys):
-        n_dims = xs.shape[-1]
-        y_wide = F.pad(ys.unsqueeze(-1), (0, n_dims - 1), value=0)
-        return torch.stack((xs, y_wide), dim=2).flatten(1, 2)
+        self.n_loops = cfg.n_loops
+        self.n_loop_window = cfg.n_loop_window
 
     def forward(self, xs, ys):
+        horizon_start = max(0, self.n_loops - self.n_loop_window)
         x = self.create_prompt(xs, ys)
-        x = self.read_in(x)
-        x = super().forward(x)
-        y = self.read_out(x).squeeze(-1)
-        y = y[:, ::self.freq] # only take the outputs (every other element)
+        z = x = self.read_in(x)
+        preds = []
+        for i in range(self.n_loops):
+            if i < horizon_start:
+                with torch.no_grad(): z = super().forward(z) + x
+                continue
+            z = super().forward(z) + x
+            y = self.read_out(z).squeeze(-1)
+            preds.append(y[:, ::self.freq])
         return y

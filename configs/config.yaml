@@ -1,0 +1,14 @@
+device: cuda
+out_dir: ./results/linear_regression_baseline
+debug_mode: False
+
+defaults:
+    - model: base
+    - tasks: LR
+    - training
+    - _self_
+
+wandb:
+    project: looped-transformer
+    name: null
+    log_every_steps: 50

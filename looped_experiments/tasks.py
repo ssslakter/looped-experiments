@@ -39,7 +39,7 @@ def sample(dl: DataLoader): return next(iter(dl))
 
 # %% ../nbs/01_tasks.ipynb 5
 class LinearRegression:
-    def __init__(self, bs: int, n_points=30, n_dims=20, std=0.1, sparsity=None, truncated_dims=0):
+    def __init__(self, bs: int, n_points=30, n_dims=20, std=0.1, sparsity=None, truncated_dims=0, **kwargs):
         """
         Args:
             bs (int): Batch size
