@@ -1,0 +1,42 @@
+import random
+from pathlib import Path
+
+import torch
+from hydra import main
+from omegaconf import DictConfig
+from .utils import show_config
+
+from .models import get_loss, get_model
+from .tasks import dataloader, get_task_cls
+from .training import (CurriculumCB, FnCallback, Learner, LoopCB, SaveModelCB,
+                       ToDeviceCB, WandbCB, repr_cbs)
+
+config_path = str(Path(__file__)/'../../configs')
+
+def set_random(seed):
+    random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+
+@main(version_base=None, config_path=config_path, config_name='config')
+def run(cfg: DictConfig):
+    show_config(cfg, "Running with config:\n")
+    set_random(cfg.random_seed)
+    train = cfg.training
+    task = get_task_cls(cfg.tasks.task_name)(train.batch_size, **cfg.tasks)
+    dl_train = dataloader(task, train.train_steps)
+    dl_eval = dataloader(task, train.eval_steps)
+
+    model = get_model(cfg.model)
+    loss_fn = get_loss(cfg.model)
+    @FnCallback("before_batch")
+    def trans_input(learner): learner.xb = (learner.xb, learner.yb)
+
+    cbs = [ToDeviceCB(), 
+           SaveModelCB(cfg.out_dir, train.save_every_steps), CurriculumCB(train.curriculum), trans_input]
+    if cfg.wandb.enabled: cbs.append(WandbCB(cfg))
+    if "loop" in cfg.model.family: cbs.append(LoopCB(cfg.model.curriculum))
+    learn = Learner(model, dl_train, dl_eval, train.n_epoch, loss_fn=loss_fn, cbs=cbs)
+    print(f"Callbacks used: {repr_cbs(sorted(cbs))}")
+    learn.fit(lr=train.learning_rate)
+

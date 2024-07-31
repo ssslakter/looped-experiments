@@ -2,4 +2,3 @@ defaults:
   - LR
 
 std: 0.1
-task_name: noisy_linear_regression

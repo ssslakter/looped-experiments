@@ -1,14 +1,20 @@
 device: cuda
-out_dir: ./results/linear_regression_baseline
 debug_mode: False
+random_seed: 1
 
 defaults:
     - model: base
     - tasks: LR
-    - training
+    - training: base
     - _self_
 
 wandb:
+    enabled: False
     project: looped-transformer
     name: null
     log_every_steps: 50
+
+out_dir: ./results/${tasks.task_name}/${model.family}/
+
+hydra:
+    output_subdir: null

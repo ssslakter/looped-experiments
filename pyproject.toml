@@ -16,6 +16,9 @@ dependencies = [
     "hydra-core",
 ]
 
+[project.scripts]
+launch-exps = "looped_experiments.main:run"
+
 [project.urls]
 Homepage = "https://github.com/ssslakter/tg-rag"
 Issues = "https://github.com/ssslakter/tg-rag/issues"

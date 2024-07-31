@@ -1,5 +1,5 @@
 task_name: linear_regression
-n_points: 30
-n_dims: 20
+n_points: ${training.curriculum.points.start}
+n_dims: ${model.n_dims}
 std: 0.0
 sparsity: null

@@ -3,3 +3,12 @@ defaults:
 
 family: gpt2_loop
 n_layer: 1
+keep_n_tokens: null
+curriculum:
+  loops:
+    start: 15
+    end: 30
+    inc: 2
+    interval: 400
+n_loop_window: 15
+n_loops: ${.curriculum.loops.start}

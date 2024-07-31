@@ -3,4 +3,3 @@ defaults:
 
 std: 0.1
 sparsity: 3
-task_name: sparse_linear_regression
