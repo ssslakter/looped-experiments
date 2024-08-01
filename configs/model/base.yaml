@@ -1,6 +1,6 @@
 family: gpt2
 n_embd: 256
-n_layer: 6
+n_layer: 12
 n_head: 8
 n_dims: 20
 n_positions: 101

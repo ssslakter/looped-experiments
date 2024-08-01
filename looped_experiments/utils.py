@@ -24,7 +24,8 @@ def_device = get_default_device()
 def to_cpu(x):
     if isinstance(x, Tensor):
         return x.detach().cpu()
-    else: to_device(x, "cpu")
+    else:
+        return to_device(x, "cpu")
 
 
 def to_device(x, device=def_device):
@@ -36,5 +37,4 @@ def to_device(x, device=def_device):
         return [to_device(v, device) for v in x]
     elif isinstance(x, tuple):
         return tuple(to_device(v, device) for v in x)
-    else:
-        return x
+    else: return x

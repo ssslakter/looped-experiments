@@ -33,7 +33,7 @@ def run(cfg: DictConfig):
            SaveModelCB(cfg.out_dir, train.save_every_steps), CurriculumCB(train.curriculum), trans_input]
     if cfg.wandb.enabled: cbs.append(WandbCB(cfg))
     if "loop" in cfg.model.family: cbs.append(LoopCB(cfg.model.curriculum))
-    learn = Learner(model, dl_train, dl_eval, train.n_epoch, loss_fn=loss_fn, cbs=cbs)
+    learn = Learner(model, dl_train, dl_eval, train.n_epoch, wd = train.weight_decay, loss_fn=loss_fn, cbs=cbs)
     print(f"Callbacks used: {repr_cbs(sorted(cbs))}")
     learn.fit(lr=train.learning_rate)
 
