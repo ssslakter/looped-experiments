@@ -1,15 +1,12 @@
 import random
 from pathlib import Path
 
+import hydra
 import torch
 from hydra import main
 from omegaconf import DictConfig
-from .utils import show_config
 
-from .models import get_loss, get_model
-from .tasks import dataloader, get_task_cls
-from .training import (CurriculumCB, FnCallback, Learner, LoopCB, SaveModelCB,
-                       ToDeviceCB, WandbCB, repr_cbs)
+from .all import *
 
 config_path = str(Path(__file__)/'../../configs')
 
@@ -18,12 +15,12 @@ def set_random(seed):
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
 
-@main(version_base=None, config_path=config_path, config_name='config')
+@main(config_path, version_base=None, config_name='config')
 def run(cfg: DictConfig):
     show_config(cfg, "Running with config:\n")
     set_random(cfg.random_seed)
     train = cfg.training
-    task = get_task_cls(cfg.tasks.task_name)(train.batch_size, **cfg.tasks)
+    task = get_task_cls(cfg.task.task_name)(train.batch_size, **cfg.task)
     dl_train = dataloader(task, train.train_steps)
     dl_eval = dataloader(task, train.eval_steps)
 
