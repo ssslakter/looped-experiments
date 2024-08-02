@@ -1,7 +1,6 @@
 import random
 from pathlib import Path
 
-import hydra
 import torch
 from hydra import main
 from omegaconf import DictConfig
@@ -29,7 +28,7 @@ def run(cfg: DictConfig):
     @FnCallback("before_batch")
     def trans_input(learner): learner.xb = (learner.xb, learner.yb)
 
-    cbs = [ToDeviceCB(), 
+    cbs = [TimerCB(), ToDeviceCB(), 
            SaveModelCB(cfg.out_dir, train.save_every_steps), CurriculumCB(train.curriculum), trans_input]
     if cfg.wandb.enabled: cbs.append(WandbCB(cfg))
     if "loop" in cfg.model.family: cbs.append(LoopCB(cfg.model.curriculum))

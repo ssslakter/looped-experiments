@@ -1,0 +1,9 @@
+project:
+  output-dir: _docs
+
+website:
+  title: "looped-experiments"
+  site-url: "https://ssslakter.github.io/looped-experiments"
+  description: ""
+  repo-branch: main
+  repo-url: "https://github.com/ssslakter/looped-experiments"

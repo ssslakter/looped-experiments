@@ -15,9 +15,18 @@ pip install git+https://github.com/ssslakter/looped-experiments.git
 or for editable installation
 
 ``` sh
-git clone https://github.com/ssslakter/looped-experiments.git .
+git clone https://github.com/ssslakter/looped-experiments.git
 cd looped-experiments
 pip install -e .
+```
+
+### Notes
+
+If you use google colab run command below to update fastprogress to the
+working version
+
+``` sh
+!pip install -I git+https://github.com/fastai/fastprogress.git
 ```
 
 ## How to run
@@ -25,7 +34,7 @@ pip install -e .
 To train models, run after installing the package
 
 ``` sh
-launch-exps --help
+python main.py --help
 ```
 
 this will show you the config options you can use to run experiments.

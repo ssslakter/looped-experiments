@@ -1,0 +1,8 @@
+website:
+  sidebar:
+    contents:
+      - index.ipynb
+      - 01_tasks.ipynb
+      - 02_models.ipynb
+      - 03_training.ipynb
+      - 04_eval.ipynb

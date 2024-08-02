@@ -14,10 +14,9 @@ dependencies = [
     "fastprogress",
     "matplotlib",
     "hydra-core",
+    "wandb"
 ]
 
-[project.scripts]
-launch-exps = "looped_experiments.main:run"
 
 [project.urls]
 Homepage = "https://github.com/ssslakter/tg-rag"

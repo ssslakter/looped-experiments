@@ -16,29 +16,17 @@ from .utils import get_config, show_config
 
 # %% ../nbs/02_models.ipynb 2
 class MaskedTransformer(nn.Module):
-    def __init__(self, cfg, freq=2):
+    def __init__(self, cfg):
         super().__init__()
         self.cfg = cfg
-        self.block_size = cfg.n_positions * freq + 1  # input, output pairs + 1 for the target
         self.transformer = nn.ModuleDict(dict(
-            wpe=nn.Embedding(self.block_size, cfg.n_embd),
             drop=nn.Dropout(cfg.dropout),
             h=nn.ModuleList([Block(cfg) for _ in range(cfg.n_layer)]),
-            ln_f=LayerNorm(cfg.n_embd, bias=cfg.bias),
         ))
-        if self.__class__ == MaskedTransformer: init_all_params(self)
 
     def forward(self, embs):
-        device = embs.device
-        bs, t, dim = embs.size()
-        assert t <= self.block_size, f"Cannot forward sequence of length {t}, block size is only {self.block_size}"
-        pos = torch.arange(0, t, dtype=torch.long, device=device)
-
-        pos_emb = self.transformer.wpe(pos)
-        x = self.transformer.drop(embs + pos_emb)
-        for block in self.transformer.h:
-            x = block(x)
-        x = self.transformer.ln_f(x)
+        x = self.transformer.drop(embs)
+        for block in self.transformer.h: x = block(x)
 
         return x
     
@@ -65,21 +53,33 @@ class Transformer(nn.Module):
         super().__init__()
         self.cfg = cfg
         self.freq = freq  # one input, one output, and so on
-        self.backbone = MaskedTransformer(cfg, freq)
+        self.backbone = MaskedTransformer(cfg)
+        self.block_size = cfg.n_positions * freq + 1  # input, output pairs + 1 for the target
         self.read_in = nn.Linear(cfg.n_dims, cfg.n_embd)
+        self.wpe=nn.Embedding(self.block_size, cfg.n_embd)
+        
+        self.ln_f=LayerNorm(cfg.n_embd, bias=cfg.bias)
         self.read_out = nn.Linear(cfg.n_embd, 1)
-
         init_all_params(self)
 
     def create_prompt(self, xs, ys):
         n_dims = xs.shape[-1]
         y_wide = F.pad(ys.unsqueeze(-1), (0, n_dims - 1), value=0)
         return torch.stack((xs, y_wide), dim=2).flatten(1, 2)
+    
+    def add_positional(self, embs):
+        device = embs.device
+        _, t, _ = embs.size()
+        assert t <= self.block_size, f"Cannot forward sequence of length {t}, block size is only {self.block_size}"
+        pos = torch.arange(0, t, dtype=torch.long, device=device)
+        return embs + self.wpe(pos)
 
     def forward(self, xs, ys):
         x = self.create_prompt(xs, ys)
         x = self.read_in(x)
+        x = self.add_positional(x)
         x = self.backbone(x)
+        x = self.ln_f(x)
         y = self.read_out(x).squeeze(-1)
         y = y[:, ::self.freq]  # only take the outputs (every other element)
         return y
@@ -89,18 +89,23 @@ class LoopedTransformer(Transformer):
     '''Looped transformer for tasks from in-context learning'''
 
     def __init__(self, cfg):
-        super().__init__(cfg)
-        self.n_loops = cfg.n_loops
-        self.n_loop_window = cfg.n_loop_window
-        
+        super().__init__(cfg, freq=2)
+        self.n_loops, self.n_loop_window = cfg.n_loops, cfg.n_loop_window
+        self.repeat_positional = cfg.repeat_positional
+        self.repeat_ln = cfg.repeat_ln
+
     def _model(self, z, x):
-        z = self.backbone(z + x)
+        z = z + x
+        if self.repeat_positional: z = self.add_positional(z)
+        z = self.backbone(z)
+        if self.repeat_ln: z = self.ln_f(z)
         return z
-    
+
     def forward(self, xs, ys):
         horizon_start = max(0, self.n_loops - self.n_loop_window)
         x = self.create_prompt(xs, ys)
         x = self.read_in(x)
+        if not self.repeat_positional: x = self.add_positional(x)
         z = torch.zeros_like(x)
         preds = []
         for i in range(self.n_loops):
@@ -108,12 +113,15 @@ class LoopedTransformer(Transformer):
                 with torch.no_grad(): z = self._model(z, x)
                 continue
             z = self._model(z, x)
-            y = self.read_out(z).squeeze(-1)
+            y = z if self.repeat_ln else self.ln_f(z)
+            y = self.read_out(y).squeeze(-1)
             preds.append(y[:, ::self.freq])
-            if self.cfg.keep_n_tokens: 
+            if self.cfg.keep_n_tokens:
                 z = z[:, -self.cfg.keep_n_tokens:]
                 x = x[:, -self.cfg.keep_n_tokens:]
-        return torch.stack(preds) if self.training else preds[-1] # for evaluation, authors only use the last prediction
+        # for evaluation, authors only use the last prediction
+        return torch.stack(preds) if self.training else preds[-1]
+
 
 def loop_loss(preds, ys): return F.mse_loss(preds, ys.expand_as(preds))
 
