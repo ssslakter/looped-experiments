@@ -9,15 +9,9 @@ paper](https://arxiv.org/abs/2311.12424)
 ## Installation
 
 ``` sh
-pip install git+https://github.com/ssslakter/looped-experiments.git
-```
-
-or for editable installation
-
-``` sh
 git clone https://github.com/ssslakter/looped-experiments.git
 cd looped-experiments
-pip install -e .
+pip install .
 ```
 
 ### Notes

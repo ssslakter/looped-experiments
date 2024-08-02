@@ -7,8 +7,6 @@ from omegaconf import DictConfig
 
 from .all import *
 
-config_path = str(Path(__file__)/'../../configs')
-
 def set_random(seed):
     random.seed(seed)
     torch.manual_seed(seed)
