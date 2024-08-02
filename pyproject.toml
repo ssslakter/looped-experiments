@@ -17,6 +17,8 @@ dependencies = [
     "wandb"
 ]
 
+[project.scripts]
+looped-run = "looped_experiments.main:run"
 
 [project.urls]
 Homepage = "https://github.com/ssslakter/tg-rag"
