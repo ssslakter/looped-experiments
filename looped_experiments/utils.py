@@ -5,10 +5,8 @@ from hydra import compose, initialize
 from omegaconf import OmegaConf as oc
 from torch import Tensor
 
-config_path = str((Path(__file__) / '../../configs').resolve())
 
-
-def get_config(path=config_path, overrides=None):
+def get_config(path='../configs', overrides=None):
     with initialize(config_path=path, version_base=None):
         return compose("config", overrides)
 

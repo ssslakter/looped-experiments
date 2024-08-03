@@ -9,9 +9,15 @@ paper](https://arxiv.org/abs/2311.12424)
 ## Installation
 
 ``` sh
+pip install git+https://github.com/ssslakter/looped-experiments.git
+```
+
+or to also get notebooks
+
+``` sh
 git clone https://github.com/ssslakter/looped-experiments.git
 cd looped-experiments
-pip install .
+pip install -e .
 ```
 
 ### Notes
@@ -28,7 +34,14 @@ working version
 To train models, run after installing the package
 
 ``` sh
-python main.py --help
+looped-run --help
 ```
 
 this will show you the config options you can use to run experiments.
+
+If you cloned the repository you can also use shell scripts like below
+to run experiments
+
+``` sh
+./scripts/loop.sh
+```

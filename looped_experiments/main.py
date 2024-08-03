@@ -7,6 +7,8 @@ from omegaconf import DictConfig
 
 from .all import *
 
+config_path = str((Path(__file__) / '../../configs').resolve())
+
 def set_random(seed):
     random.seed(seed)
     torch.manual_seed(seed)
@@ -27,9 +29,9 @@ def run(cfg: DictConfig):
     def trans_input(learner): learner.xb = (learner.xb, learner.yb)
 
     cbs = [TimerCB(), ToDeviceCB(), 
-           SaveModelCB(cfg.out_dir, train.save_every_steps), CurriculumCB(train.curriculum), trans_input]
+           SaveModelCB(cfg.out_dir, train.save_every_steps), CurriculumCB(train.curriculum, train), trans_input]
     if cfg.wandb.enabled: cbs.append(WandbCB(cfg))
-    if "loop" in cfg.model.family: cbs.append(LoopCB(cfg.model.curriculum))
+    if "loop" in cfg.model.family: cbs.append(LoopCB(cfg.model.curriculum, train))
     learn = Learner(model, dl_train, dl_eval, train.n_epoch, wd = train.weight_decay, loss_fn=loss_fn, cbs=cbs)
     print(f"Callbacks used: {repr_cbs(sorted(cbs))}")
     learn.fit(lr=train.learning_rate)

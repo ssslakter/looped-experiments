@@ -12,7 +12,6 @@ import torch.nn.functional as F
 from torch import nn
 
 from .nano_gpt import Block, LayerNorm
-from .utils import get_config, show_config
 
 # %% ../nbs/02_models.ipynb 2
 class MaskedTransformer(nn.Module):
