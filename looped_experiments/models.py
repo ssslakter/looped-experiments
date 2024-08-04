@@ -92,9 +92,11 @@ class LoopedTransformer(Transformer):
         self.n_loops, self.n_loop_window = cfg.n_loops, cfg.n_loop_window
         self.repeat_positional = cfg.repeat_positional
         self.repeat_ln = cfg.repeat_ln
+        self.keep_n_tokens = cfg.keep_n_tokens
+        self.token_dec = cfg.token_dec or 0
 
     def _model(self, z, x):
-        z = z + x
+        z = z + x  # residual with addition
         if self.repeat_positional: z = self.add_positional(z)
         z = self.backbone(z)
         if self.repeat_ln: z = self.ln_f(z)
@@ -103,10 +105,12 @@ class LoopedTransformer(Transformer):
     def forward(self, xs, ys):
         horizon_start = max(0, self.n_loops - self.n_loop_window)
         x = self.create_prompt(xs, ys)
+        b, t, _ = x.size()
         x = self.read_in(x)
         if not self.repeat_positional: x = self.add_positional(x)
         z = torch.zeros_like(x)
-        preds = []
+        keep = t
+        preds = torch.zeros(self.n_loop_window, b, t // self.freq, device=x.device) + float('nan')
         for i in range(self.n_loops):
             if i < horizon_start:
                 with torch.no_grad(): z = self._model(z, x)
@@ -114,15 +118,17 @@ class LoopedTransformer(Transformer):
             z = self._model(z, x)
             y = z if self.repeat_ln else self.ln_f(z)
             y = self.read_out(y).squeeze(-1)
-            preds.append(y[:, ::self.freq])
-            if self.cfg.keep_n_tokens:
-                z = z[:, -self.cfg.keep_n_tokens:]
-                x = x[:, -self.cfg.keep_n_tokens:]
-        # for evaluation, authors only use the last prediction
-        return torch.stack(preds) if self.training else preds[-1]
+            preds[i - horizon_start, :, -(x.size(1) // self.freq):] = y[:, (x.size(1) - 2) % self.freq::self.freq]
+            # remove first tokens
+            keep = max(self.keep_n_tokens or t, keep - self.token_dec)
+            z = z[:, -keep:]
+            x = x[:, -keep:]
+
+        return preds
 
 
-def loop_loss(preds, ys): return F.mse_loss(preds, ys.expand_as(preds))
+def loop_loss(preds, ys):
+    return torch.nanmean((preds - ys.expand_as(preds)).square())
 
 # %% ../nbs/02_models.ipynb 5
 def get_model(cfg):

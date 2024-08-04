@@ -1,5 +1,5 @@
 batch_size: 64
-n_epoch: 20 # for infinite datasets, used only for more frequent evaluation
+n_epoch: 15 # for infinite datasets, used only for more frequent evaluation
 train_steps: 5000
 eval_steps: 500
 

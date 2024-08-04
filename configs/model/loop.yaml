@@ -5,7 +5,6 @@ family: gpt2_loop
 n_layer: 1
 repeat_positional: true
 repeat_ln: true
-keep_n_tokens: null
 curriculum:
   loops:
     type: linear
@@ -15,3 +14,5 @@ curriculum:
     interval: 500
 n_loop_window: 15
 n_loops: ${.curriculum.loops.start}
+keep_n_tokens: null
+token_dec: null
