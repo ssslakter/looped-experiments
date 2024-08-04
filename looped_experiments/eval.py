@@ -40,6 +40,7 @@ def eval(cfg, model_path=None):
 
     model = get_model(cfg.model)
     weights = torch.load(model_path or cfg.out_dir / "model_last.pt", weights_only=True)
+    if '+train' in str(model_path): weights = weights['model_state_dict']
     model.load_state_dict(weights)
     loss_fn = get_loss(cfg.model)
     metric_cb = MetricsCB(squared_error)
@@ -47,7 +48,7 @@ def eval(cfg, model_path=None):
     Learner(model, None, dl_eval, None, loss_fn=loss_fn, cbs=cbs).eval()
     return metric_cb.metrics
 
-# %% ../nbs/04_eval.ipynb 9
+# %% ../nbs/04_eval.ipynb 12
 def aggregate_metrics(result_dict, non_truncated_dims, bootstrap_trials=1000):
     """
     Takes as input a tensor of shape (num_eval, n_points) and returns a dict with

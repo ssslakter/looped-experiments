@@ -6,7 +6,11 @@ from omegaconf import OmegaConf as oc
 from torch import Tensor
 
 
-def get_config(path='../configs', overrides=None):
+def get_config(path='../configs', cfg_dict=None, overrides=None):
+    if cfg_dict is not None:
+        cfg = oc.create(cfg_dict)
+        cfg.merge_with_dotlist(overrides)
+        return cfg
     with initialize(config_path=path, version_base=None):
         return compose("config", overrides)
 
