@@ -21,8 +21,8 @@ dependencies = [
 looped-run = "looped_experiments.main:run"
 
 [project.urls]
-Homepage = "https://github.com/ssslakter/tg-rag"
-Issues = "https://github.com/ssslakter/tg-rag/issues"
+Homepage = "https://github.com/ssslakter/looped-experiments"
+Issues = "https://github.com/ssslakter/looped-experiments/issues"
 
 [tool.setuptools]
 packages = ["looped_experiments"]
