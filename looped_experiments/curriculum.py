@@ -20,10 +20,10 @@ def linear_clm(cfg, steps):
 
 def log_clm(cfg, steps, base=1.1):
     values = torch.zeros_like(steps)
-    bins=torch.cat((torch.tensor([float("-inf")]),torch.arange(cfg.end - cfg.start)))
-    for i, v in enumerate(cfg.interval*torch.cumsum(torch.pow(base, bins), 0)):
-        values[steps >= v]= i*cfg.inc
-    return torch.minimum(values+cfg.start, torch.tensor(cfg.end))
+    bins = torch.cat((torch.tensor([float("-inf")]), torch.arange(cfg.end - cfg.start)))
+    for i, v in enumerate(cfg.interval * torch.cumsum(torch.pow(base, bins), 0)):
+        values[steps >= v] = i * cfg.inc
+    return torch.minimum(values + cfg.start, torch.tensor(cfg.end))
 
 
 def sqrt_clm(cfg, steps):
@@ -31,32 +31,29 @@ def sqrt_clm(cfg, steps):
 
 
 def cos_clm(cfg, steps):
-    return torch.round((cfg.end - cfg.start)/2 * -torch.cos(steps / cfg.interval * cfg.inc) + (cfg.end + cfg.start)/2)
-
+    return torch.round((cfg.end - cfg.start) / 2 * -torch.cos(steps / cfg.interval * cfg.inc) + (cfg.end + cfg.start) / 2)
 
 # %% ../nbs/03.1_curriculum.ipynb 6
 class Curriculum:
     """Curriculum for training"""
     funcs = {
-            'linear': linear_clm,
-            'log': log_clm,
-            'sqrt': sqrt_clm,
-            'cos': cos_clm
-            }
-    
-    def __init__(self, cfg, n_steps=10_000, clm_type='linear', clm_func=None, **kwargs):
+        'linear': linear_clm,
+        'log': log_clm,
+        'sqrt': sqrt_clm,
+        'cos': cos_clm
+    }
+
+    def __init__(self, cfg, n_steps=10_000, clm_func=None, **kwargs):
         """Initialize the Curriculum class.
 
         Args:
             cfg (dict): The configuration for the curriculum.
             n_steps (int, optional): The total number of steps. Defaults to 10_000.
-            clm_type (str, optional): The type of curriculum function. Used if `clm_func` is None. Defaults to 'linear'.
             clm_func (function, optional): The custom curriculum function. Defaults to None.
         """
         self.steps = torch.arange(0, n_steps, 1)
-        f = clm_func or self.clm_func(clm_type)
+        f = clm_func or self.clm_func(cfg.type)
         self.values = f(cfg, self.steps, **kwargs).type(torch.int32)
-        
 
     @classmethod
     def clm_func(self, type: str):
@@ -64,7 +61,7 @@ class Curriculum:
         return self.funcs[type]
 
     def __call__(self, step):
-        return self.values[step-1].item()
+        return self.values[step - 1].item()
 
     def show(self, ax=None, figsize=(12, 5)):
         if ax is None: _, ax = plt.subplots(figsize=figsize)
@@ -76,8 +73,8 @@ class Curriculum:
 class CurriculumCB(Callback):
     def __init__(self, curriculum_config, train_config):
         self.cfg = curriculum_config
-        kwgs = lambda x: ({} if not hasattr(x, 'kwargs') else x.kwargs)
-        self.curs = {k: Curriculum(v, n_steps=train_config.train_steps * train_config.n_epoch, clm_type=v.type, **kwgs(v))
+        kwargs = lambda x: ({} if not hasattr(x, 'kwargs') else x.kwargs)
+        self.curs = {k: Curriculum(v, n_steps=train_config.train_steps * train_config.n_epoch, **kwargs(v))
                      for k, v in curriculum_config.items()}
 
     def update_task(self, learn, ds):
