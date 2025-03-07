@@ -1,35 +1,35 @@
-# Результаты
-Для ускорения обучения, максимальное число точек в промпте $P$ при обучении было уменьшено до `n_points=20`, а максимальная размерность до `n_dims=10`. Максимальное число циклов $b$ равно `n_loops=20` и $T$ равно `n_loop_windows=5`. Шагов обучения - 75000, размер моделей также был уменьшен, для деталей см. [configs/](./configs/). 
+# Results
+To accelerate training, the maximum number of points in the prompt $P$ during training was reduced to `n_points=20`, and the maximum dimensionality to `n_dims=10`. The maximum number of cycles $b$ was set to `n_loops=20`, and $T$ was set to `n_loop_windows=5`. The number of training steps was 75,000, and model sizes were also reduced; see [configs/](./configs/) for details.
 
-По большей части эксперименты проводились на задачах классической линейной регрессии.
+Most experiments were conducted on classical linear regression tasks.
 
-## Меньше токенов
-Было проведено несколько экспериментов, когда на каждую следующую итерацию цикла передается на $d$ меньше токенов. То есть, после первой итерации цикла в модель передается $n-d$ последних токенов, после второй $n-2d$ и так далее, до минимального числа токенов $k$. При обучении это позволяет увеличить среднее количество итераций в секунду __в 1.7 раз__.
+## Fewer Tokens
+Several experiments were conducted where each subsequent iteration of the cycle passed $d$ fewer tokens. That is, after the first iteration, the model received the last $n-d$ tokens; after the second, $n-2d$ tokens, and so on, down to a minimum token count $k$. During training, this approach increased the average number of iterations per second by **1.7 times**.
 
-Ниже представлены графики ошибки моделей по количеству токенов в контексте (после 100 циклов) и по числу циклов.
+Below are graphs showing model error relative to the number of tokens in the context (after 100 cycles) and the number of cycles.
 
 <img src="./media/T5_ex.png" height="180">
 <img src="./media/T5_loop.png" height="180">
 
-В результате модели, которые передавали на следующий цикл только часть токенов имеют меньшую точность но всех итерациях и точках. Возможно это связано с тем, что модели недообучились из-за меньшего числа данных. Также, если в модели оставить только 5 токенов сразу после первой итерации `k=5, d=100`, то модель не смогла обучиться вообще.
+As a result, models that passed only part of the tokens to the next cycle had lower accuracy across all iterations and points. This might be due to undertraining caused by the reduced data volume. Furthermore, when only 5 tokens were retained immediately after the first iteration ($k=5$, $d=100$), the model failed to train altogether.
 
-Интересно, что модели у которых передавались не все токены сохранают ту же точность и для более длинных последовательностей, в отличии от модели с `d=0`.
+Interestingly, models that did not pass all tokens retained comparable accuracy for longer sequences, unlike the $d=0$ model.
 
-Ниже представлены аналогичные графики для моделей, обученных с `n_loops=30` и `n_loops_window=10`. При выборе большого шага удаления токенов, модель также очень плохо обучается.
+Below are similar graphs for models trained with `n_loops=30` and `n_loops_window=10`. With a large token removal step, the model also trained poorly.
 
 <img src="./media/T10_ex.png" height="185">
 <img src="./media/T10_loop.png" height="185">
 
 ## Curriculum
-Также было исследовано, как Curriculum влияет на качество моделей. Идея заключалась в том, чтобы постепенно увеличивать количество шагов на котором количество точек/измерений/циклов фиксировано, чтобы модель успела обучиться перед увеличением сложности задачи.
+The impact of curriculum learning on model quality was also investigated. The idea was to gradually increase the number of steps during which the number of points/dimensions/cycles remained fixed, allowing the model to train before increasing task complexity.
 
-Таким образом помимо линейного curriculum, были опробованы следующие варианты, указанные на графиках. Все модели обучались с максимальным `n_loops=20` и `n_points=20`, и `n_loop_windows=5`. 
+In addition to a linear curriculum, the following variations were tested, as shown in the graphs. All models were trained with `n_loops=20`, `n_points=20`, and `n_loop_windows=5`.
 
 <img src="./media/clm_ex.png" height="197">
-<img src="./media/clm_loop.png"height="197">
+<img src="./media/clm_loop.png" height="197">
 
-Как видно, при увеличении числа циклов модели сохраняют среднюю точность. Причем модель с линейным curriculum находит наиболее оптимальное решение для точек из промптов, где их размер, такой-же как в промптах из обучения. Однако при большем количестве, точность начинает падать, тогда как модели с curriculum $\sqrt{x}$ и $\cos{x}$, теряют её медленнее. Возможно из-за того, что длины промптов менялись неравномерно, модели смогли лучше адаптироваться под изменение их длины. В случае модели с $\log_2{x}$, то curriculum в ней не смог дойти до максимального числа циклов к концу итераций обучения, поэтому скорее всего модель не может обобщать на большее число циклов и точек.
+As shown, increasing the number of cycles preserves average accuracy. Notably, the model with a linear curriculum achieved the best results for prompt sizes matching those used in training. However, with larger prompts, its accuracy declined, while models using $\sqrt{x}$ and $\cos{x}$ curricula experienced a slower drop in accuracy. This could be because the uneven prompt length changes helped models better adapt to varying prompt sizes. In the case of the $\log_2{x}$ curriculum, it did not reach the maximum number of cycles by the end of training, so the model likely failed to generalize to larger cycle and point counts.
 
-## Другие наблюдения
-- В процессе реализации было замечено, что в оригинальном коде авторов, при каждой итерации цикла в моделе помимо блока трансформера в данные повторно добавляется positional encoding и layer norm. Были рассмотрены модели, когда эти слои находятся только перед первым циклом и после последнего соответственно, тем самым соотвестсвуя нескольким блокам трансформера с общими параметрами (_в классическом трансформере позиционное кодирование происходит только один раз_). Однако, такие модели показали себя хуже. Пока сложно сказать почему так происходит, возможно информация о позиции настолько важна для каждой итерации цикла, что без неё модель работает хуже. Другая гипотеза заключается в том, что стабилизирует обучение именно повторное применение layer norm, однако на данный момент не хватило времени для более детальные эксперименты.
-- Также немного было затронуто использование 2-ух блоков вместо 1-го для каждой итерации цикла. Модель, пройдя в 2 раза меньше итераций, достигла сравнимой ошибки для модели с 1 блоком.
+## Additional Observations
+- During implementation, it was observed that in the authors' original code, with each cycle iteration, positional encoding and layer normalization were reapplied in addition to the transformer block. Models were tested where these layers were only applied before the first and after the last cycle, aligning with multiple transformer blocks sharing parameters (_in a classic transformer, positional encoding is applied only once_). However, such models performed worse. It is unclear why this happens—possibly positional information is so critical to each cycle iteration that the model performs poorly without it. Another hypothesis is that repeated layer normalization stabilizes training. However, there was not enough time for more detailed experiments.
+- The use of two blocks per cycle iteration was briefly explored. The model, after running half as many iterations, achieved errors comparable to a single-block model.
