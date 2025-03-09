@@ -7,6 +7,8 @@ This repository contains experiments that try to reproduce
 [looped-transformer paper](https://arxiv.org/abs/2311.12424) and test
 models performance with different modifications.
 
+More details on the results can be found [here](/Results.md)
+
 [WandB workspace](https://wandb.ai/slakter/looped-transformer/workspace)
 
 ## Installation
